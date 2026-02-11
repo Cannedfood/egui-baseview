@@ -9,7 +9,7 @@ use crossbeam::atomic::AtomicCell;
 use egui::Context;
 use nih_plug::params::persist::PersistentField;
 use nih_plug::prelude::{Editor, ParamSetter};
-use parking_lot::RwLock;
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -72,8 +72,8 @@ impl Default for EguiSettings {
 
 /// Create an [`Editor`] instance using an [`egui`][::egui] GUI. Using the user state parameter is
 /// optional, but it can be useful for keeping track of some temporary GUI-only settings. See the
-/// `gui_gain` example for more information on how to use this. The [`EguiState`] passed to this
-/// function contains the GUI's intitial size, and this is kept in sync whenever the GUI gets
+/// `nih_plug_gain_egui` example for more information on how to use this. The [`EguiState`] passed
+/// to this function contains the GUI's intitial size, and this is kept in sync whenever the GUI gets
 /// resized. You can also use this to know if the GUI is open, so you can avoid performing
 /// potentially expensive calculations while the GUI is not open. If you want this size to be
 /// persisted when restoring a plugin instance, then you can store it in a `#[persist = "key"]`
@@ -88,13 +88,13 @@ pub fn create_egui_editor<T, B, U>(
     update: U,
 ) -> Option<Box<dyn Editor>>
 where
-    T: 'static + Send + Sync,
+    T: 'static + Send,
     B: Fn(&Context, &mut Queue, &mut T) + 'static + Send + Sync,
     U: Fn(&Context, &ParamSetter, &mut Queue, &mut T) + 'static + Send + Sync,
 {
     Some(Box::new(editor::EguiEditor {
         egui_state,
-        user_state: Arc::new(RwLock::new(user_state)),
+        user_state: Arc::new(Mutex::new(user_state)),
         settings: Arc::new(settings),
         build: Arc::new(build),
         update: Arc::new(update),
