@@ -246,9 +246,9 @@ where
     /// * `settings` - The settings of the window.
     /// * `state` - The initial state of your application.
     /// * `build` - Called once before the first frame. Allows you to do setup code and to
-    /// call `ctx.set_fonts()`. Optional.
+    ///   call `ctx.set_fonts()`. Optional.
     /// * `update` - Called before each frame. Here you should update the state of your
-    /// application and build the UI.
+    ///   application and build the UI.
     pub fn open_parented<P, B>(
         parent: &P,
         #[allow(unused_mut)] mut settings: WindowOpenOptions,
@@ -283,9 +283,9 @@ where
     /// * `settings` - The settings of the window.
     /// * `state` - The initial state of your application.
     /// * `build` - Called once before the first frame. Allows you to do setup code and to
-    /// call `ctx.set_fonts()`. Optional.
+    ///   call `ctx.set_fonts()`. Optional.
     /// * `update` - Called before each frame. Here you should update the state of your
-    /// application and build the UI.
+    ///   application and build the UI.
     pub fn open_blocking<B>(
         #[allow(unused_mut)] mut settings: WindowOpenOptions,
         graphics_config: GraphicsConfig,
@@ -514,6 +514,7 @@ where
                     }
 
                     self.egui_input.events.push(egui::Event::MouseWheel {
+                        phase: egui::TouchPhase::Move,
                         unit,
                         delta,
                         modifiers: self.egui_input.modifiers,
@@ -660,14 +661,17 @@ where
         // This allows DAW shortcuts (spacebar, etc.) to pass through when no text field is focused
         match &event {
             baseview::Event::Keyboard(_) => {
-                if return_status == EventStatus::Captured && !self.egui_ctx.wants_keyboard_input() {
+                if return_status == EventStatus::Captured
+                    && !self.egui_ctx.egui_wants_keyboard_input()
+                {
                     EventStatus::Ignored
                 } else {
                     return_status
                 }
             }
             baseview::Event::Mouse(_) => {
-                if self.egui_ctx.is_using_pointer() || self.egui_ctx.wants_pointer_input() {
+                if self.egui_ctx.egui_is_using_pointer() || self.egui_ctx.egui_wants_pointer_input()
+                {
                     EventStatus::Captured
                 } else {
                     EventStatus::Ignored

@@ -51,16 +51,16 @@ nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149e
 [dependencies]
 baseview.workspace = true
 raw-window-handle.workspace = true
-egui = { version = "0.33", default-features = false, features = ["bytemuck"] }
-egui_glow = { version = "0.33", features = ["x11"], optional = true }
-egui-wgpu = { version = "0.33", features = ["x11"], optional = true }
-wgpu = { version = "27.0.1", optional = true }
+egui = { version = "0.34", default-features = false, features = ["bytemuck"] }
+egui_glow = { version = "0.34", features = ["x11"], optional = true }
+egui-wgpu = { version = "0.34", features = ["x11"], optional = true }
+wgpu = { version = "29.0.1", optional = true }
 keyboard-types = { version = "0.6", default-features = false }
 raw-window-handle-06 = { package = "raw-window-handle", version = "0.6", optional = true }
 # TODO: Enable wayland feature when baseview gets wayland support.
 copypasta = { version = "0.10", default-features = false, features = ["x11"] }
 nih_plug = { workspace = true, optional = true }
 tracing = { version = "0.1", optional = true }
-open = "5.1"
+open = "5.3"
 pollster = { version = "0.4", optional = true }
 thiserror = "2.0"
