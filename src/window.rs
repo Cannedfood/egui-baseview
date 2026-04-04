@@ -104,7 +104,7 @@ pub enum KeyCapture {
 pub struct EguiWindow<State, U>
 where
     State: 'static + Send,
-    U: FnMut(&egui::Context, &mut Queue, &mut State),
+    U: FnMut(&mut egui::Ui, &mut Queue, &mut State),
     U: 'static + Send,
 {
     user_state: Option<State>,
@@ -134,7 +134,7 @@ where
 impl<State, U> EguiWindow<State, U>
 where
     State: 'static + Send,
-    U: FnMut(&egui::Context, &mut Queue, &mut State),
+    U: FnMut(&mut egui::Ui, &mut Queue, &mut State),
     U: 'static + Send,
 {
     fn new<B>(
@@ -322,7 +322,7 @@ where
 impl<State, U> WindowHandler for EguiWindow<State, U>
 where
     State: 'static + Send,
-    U: FnMut(&egui::Context, &mut Queue, &mut State),
+    U: FnMut(&mut egui::Ui, &mut Queue, &mut State),
     U: 'static + Send,
 {
     fn on_frame(&mut self, window: &mut Window) {
@@ -346,7 +346,16 @@ where
             &mut self.key_capture,
         );
 
-        (self.user_update)(&self.egui_ctx, &mut queue, state);
+        let mut ui = egui::Ui::new(
+            self.egui_ctx.clone(),
+            egui::Id::new((self.egui_ctx.viewport_id(), "central_panel")),
+            egui::UiBuilder::new()
+                .layer_id(egui::LayerId::background())
+                .max_rect(self.egui_ctx.content_rect()),
+        );
+        ui.set_clip_rect(self.egui_ctx.content_rect());
+
+        (self.user_update)(&mut ui, &mut queue, state);
 
         if self.close_requested {
             window.close();

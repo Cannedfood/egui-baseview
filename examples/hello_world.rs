@@ -18,8 +18,8 @@ fn main() {
         GraphicsConfig::default(),
         state,
         |_egui_ctx: &Context, _queue: &mut Queue, _state: &mut ()| {},
-        |egui_ctx: &Context, _queue: &mut Queue, _state: &mut ()| {
-            egui::Window::new("egui-baseview hello world").show(egui_ctx, |ui| {
+        |ui: &mut egui::Ui, _queue: &mut Queue, _state: &mut ()| {
+            egui::Window::new("egui-baseview hello world").show(ui.ctx(), |ui| {
                 ui.label("Hello World!");
             });
         },

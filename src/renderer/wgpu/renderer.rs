@@ -59,6 +59,7 @@ pub struct Renderer {
     config: GraphicsConfig,
     msaa_texture_view: Option<TextureView>,
     msaa_samples: u32,
+    reconfigure_surface: bool,
     width: u32,
     height: u32,
 }
@@ -135,6 +136,7 @@ impl Renderer {
             config,
             msaa_texture_view: None,
             msaa_samples,
+            reconfigure_surface: false,
             width: 0,
             height: 0,
         })
@@ -261,8 +263,15 @@ impl Renderer {
             self.resize_and_generate_msaa_view(canvas_width, canvas_height);
         }
 
+        if self.reconfigure_surface {
+            self.configure_surface(self.width, self.height);
+            self.reconfigure_surface = false;
+        }
+
         let output_frame = match self.surface.get_current_texture() {
-            CurrentSurfaceTexture::Success(frame) | CurrentSurfaceTexture::Suboptimal(frame) => {
+            CurrentSurfaceTexture::Success(frame) => frame,
+            CurrentSurfaceTexture::Suboptimal(frame) => {
+                self.reconfigure_surface = true;
                 frame
             }
             other => match (self.config.wgpu_options.on_surface_status)(&other) {

@@ -662,14 +662,14 @@ fn main() {
         GraphicsConfig::default(),
         state,
         |_egui_ctx: &Context, _queue: &mut Queue, _state: &mut ColorTest| {},
-        |egui_ctx: &Context, _queue: &mut Queue, state: &mut ColorTest| {
-            egui::Window::new("egui-baseview hello world").show(egui_ctx, |ui| {
+        |ui: &mut egui::Ui, _queue: &mut Queue, state: &mut ColorTest| {
+            egui::Window::new("egui-baseview hello world").show(ui.ctx(), |ui| {
                 ui.label("uwu");
             });
 
             egui::Window::new("rendering test")
                 .scroll(true)
-                .show(egui_ctx, |ui| {
+                .show(ui.ctx(), |ui| {
                     state.ui(ui);
                 });
         },

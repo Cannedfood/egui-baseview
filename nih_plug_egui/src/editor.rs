@@ -8,6 +8,7 @@ use baseview::PhySize;
 use baseview::{Size, WindowHandle, WindowOpenOptions, WindowScalePolicy};
 use crossbeam::atomic::AtomicCell;
 use egui_baseview::egui::Context;
+use egui_baseview::egui::Ui;
 use egui_baseview::EguiWindow;
 use egui_baseview::Queue;
 use nih_plug::prelude::{Editor, GuiContext, ParamSetter, ParentWindowHandle};
@@ -27,7 +28,7 @@ pub(crate) struct EguiEditor<T> {
     pub(crate) build: Arc<dyn Fn(&Context, &mut Queue, &mut T) + 'static + Send + Sync>,
     /// The user's update function.
     pub(crate) update:
-        Arc<dyn Fn(&Context, &ParamSetter, &mut Queue, &mut T) + 'static + Send + Sync>,
+        Arc<dyn Fn(&mut Ui, &ParamSetter, &mut Queue, &mut T) + 'static + Send + Sync>,
 
     /// The scaling factor reported by the host, if any. On macOS this will never be set and we
     /// should use the system scaling factor instead.
@@ -111,8 +112,9 @@ where
             self.settings.graphics_config.clone(),
             state,
             move |egui_ctx, queue, state| build(egui_ctx, queue, &mut state.lock()),
-            move |egui_ctx, queue, state| {
+            move |ui, queue, state| {
                 let setter = ParamSetter::new(context.as_ref());
+                let egui_ctx = ui.ctx();
 
                 // If the window was requested to resize
                 if let Some(new_size) = egui_state.requested_size.swap(None) {
@@ -140,7 +142,7 @@ where
                 // this we would also have a blank GUI when it gets first opened because most DAWs open
                 // their GUI while the window is still unmapped.
                 egui_ctx.request_repaint();
-                (update)(egui_ctx, &setter, queue, &mut state.lock());
+                (update)(ui, &setter, queue, &mut state.lock());
             },
         );
 
