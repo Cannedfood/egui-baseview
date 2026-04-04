@@ -1,3 +1,5 @@
+#![cfg_attr(all(feature = "opengl", feature = "wgpu"), allow(dead_code))]
+
 use std::{
     num::{NonZeroIsize, NonZeroU32},
     ptr::NonNull,
@@ -8,7 +10,7 @@ use baseview::{PhySize, Window};
 use egui::FullOutput;
 use egui_wgpu::{
     wgpu::{
-        Color, CommandEncoderDescriptor, Extent3d, Instance, InstanceDescriptor,
+        Color, CommandEncoderDescriptor, CurrentSurfaceTexture, Extent3d,
         RenderPassColorAttachment, RenderPassDescriptor, Surface, SurfaceConfiguration,
         SurfaceTargetUnsafe, TextureDescriptor, TextureDimension, TextureUsages, TextureView,
         TextureViewDescriptor,
@@ -63,31 +65,29 @@ pub struct Renderer {
 
 impl Renderer {
     pub fn new(window: &Window, config: GraphicsConfig) -> Result<Self, WgpuError> {
-        let instance = Instance::new(&InstanceDescriptor::default());
+        let instance = pollster::block_on(config.wgpu_options.wgpu_setup.new_instance());
 
         let raw_display_handle = window.raw_display_handle();
         let raw_window_handle = window.raw_window_handle();
 
         let target = SurfaceTargetUnsafe::RawHandle {
             raw_display_handle: match raw_display_handle {
-                raw_window_handle::RawDisplayHandle::AppKit(_) => {
-                    raw_window_handle_06::RawDisplayHandle::AppKit(AppKitDisplayHandle::new())
-                }
+                raw_window_handle::RawDisplayHandle::AppKit(_) => Some(
+                    raw_window_handle_06::RawDisplayHandle::AppKit(AppKitDisplayHandle::new()),
+                ),
                 raw_window_handle::RawDisplayHandle::Xlib(handle) => {
-                    raw_window_handle_06::RawDisplayHandle::Xlib(XlibDisplayHandle::new(
-                        NonNull::new(handle.display),
-                        handle.screen,
+                    Some(raw_window_handle_06::RawDisplayHandle::Xlib(
+                        XlibDisplayHandle::new(NonNull::new(handle.display), handle.screen),
                     ))
                 }
                 raw_window_handle::RawDisplayHandle::Xcb(handle) => {
-                    raw_window_handle_06::RawDisplayHandle::Xcb(XcbDisplayHandle::new(
-                        NonNull::new(handle.connection),
-                        handle.screen,
+                    Some(raw_window_handle_06::RawDisplayHandle::Xcb(
+                        XcbDisplayHandle::new(NonNull::new(handle.connection), handle.screen),
                     ))
                 }
-                raw_window_handle::RawDisplayHandle::Windows(_) => {
-                    raw_window_handle_06::RawDisplayHandle::Windows(WindowsDisplayHandle::new())
-                }
+                raw_window_handle::RawDisplayHandle::Windows(_) => Some(
+                    raw_window_handle_06::RawDisplayHandle::Windows(WindowsDisplayHandle::new()),
+                ),
                 _ => todo!(),
             },
             raw_window_handle: match raw_window_handle {
@@ -118,7 +118,7 @@ impl Renderer {
             },
         };
 
-        let surface = unsafe { instance.create_surface_unsafe(target) }.unwrap();
+        let surface = unsafe { instance.create_surface_unsafe(target) }?;
 
         let msaa_samples = config.renderer_options.msaa_samples;
 
@@ -261,11 +261,11 @@ impl Renderer {
             self.resize_and_generate_msaa_view(canvas_width, canvas_height);
         }
 
-        let output_frame = { self.surface.get_current_texture() };
-
-        let output_frame = match output_frame {
-            Ok(frame) => frame,
-            Err(err) => match (self.config.wgpu_options.on_surface_error)(err) {
+        let output_frame = match self.surface.get_current_texture() {
+            CurrentSurfaceTexture::Success(frame) | CurrentSurfaceTexture::Suboptimal(frame) => {
+                frame
+            }
+            other => match (self.config.wgpu_options.on_surface_status)(&other) {
                 egui_wgpu::SurfaceErrorAction::SkipFrame => return,
                 egui_wgpu::SurfaceErrorAction::RecreateSurface => {
                     self.configure_surface(self.width, self.height);
@@ -305,6 +305,7 @@ impl Renderer {
                 depth_stencil_attachment: None,
                 timestamp_writes: None,
                 occlusion_query_set: None,
+                multiview_mask: None,
             });
 
             // Forgetting the pass' lifetime means that we are no longer compile-time protected from
