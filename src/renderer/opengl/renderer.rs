@@ -102,8 +102,10 @@ impl Renderer {
             self.glow_context.clear(egui_glow::glow::COLOR_BUFFER_BIT);
         }
 
-        for (id, image_delta) in &textures_delta.set {
-            self.painter.set_texture(*id, image_delta);
+        for (id, image_deltas) in textures_delta.set.drain() {
+            for image_delta in image_deltas {
+                self.painter.set_texture(id, &image_delta);
+            }
         }
 
         let clipped_primitives = egui_ctx.tessellate(shapes, pixels_per_point);
@@ -112,7 +114,7 @@ impl Renderer {
         self.painter
             .paint_primitives(dimensions, pixels_per_point, &clipped_primitives);
 
-        for id in textures_delta.free.drain(..) {
+        for id in textures_delta.free.drain() {
             self.painter.free_texture(id);
         }
 

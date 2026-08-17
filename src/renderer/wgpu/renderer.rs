@@ -156,7 +156,7 @@ impl Renderer {
         let mut surf_config = SurfaceConfiguration {
             usage,
             format: self.render_state.target_format,
-            present_mode: self.config.wgpu_options.present_mode,
+            present_mode: self.config.wgpu_options.surface.present_mode,
             view_formats: vec![self.render_state.target_format],
             ..self
                 .surface
@@ -164,8 +164,11 @@ impl Renderer {
                 .expect("Unsupported surface")
         };
 
-        if let Some(desired_maximum_frame_latency) =
-            self.config.wgpu_options.desired_maximum_frame_latency
+        if let Some(desired_maximum_frame_latency) = self
+            .config
+            .wgpu_options
+            .surface
+            .desired_maximum_frame_latency
         {
             surf_config.desired_maximum_frame_latency = desired_maximum_frame_latency;
         }
@@ -238,13 +241,15 @@ impl Renderer {
 
         let user_cmd_bufs = {
             let mut renderer = self.render_state.renderer.write();
-            for (id, image_delta) in &full_output.textures_delta.set {
-                renderer.update_texture(
-                    &self.render_state.device,
-                    &self.render_state.queue,
-                    *id,
-                    image_delta,
-                );
+            for (id, image_deltas) in full_output.textures_delta.set.drain() {
+                for image_delta in image_deltas {
+                    renderer.update_texture(
+                        &self.render_state.device,
+                        &self.render_state.queue,
+                        id,
+                        &image_delta,
+                    );
+                }
             }
 
             renderer.update_buffers(
@@ -276,7 +281,8 @@ impl Renderer {
             }
             other => match (self.config.wgpu_options.on_surface_status)(&other) {
                 egui_wgpu::SurfaceErrorAction::SkipFrame => return,
-                egui_wgpu::SurfaceErrorAction::RecreateSurface => {
+                egui_wgpu::SurfaceErrorAction::Reconfigure
+                | egui_wgpu::SurfaceErrorAction::RecreateSurface => {
                     self.configure_surface(self.width, self.height);
                     return;
                 }
@@ -329,8 +335,8 @@ impl Renderer {
 
         {
             let mut renderer = self.render_state.renderer.write();
-            for id in &full_output.textures_delta.free {
-                renderer.free_texture(id);
+            for id in full_output.textures_delta.free.drain() {
+                renderer.free_texture(&id);
             }
         }
 
@@ -340,6 +346,6 @@ impl Renderer {
             .queue
             .submit(user_cmd_bufs.into_iter().chain([encoded]));
 
-        output_frame.present();
+        self.render_state.queue.present(output_frame);
     }
 }
